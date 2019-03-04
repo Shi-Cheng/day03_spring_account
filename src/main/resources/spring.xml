@@ -1,0 +1,56 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+       xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+       xmlns:aop="http://www.springframework.org/schema/aop"
+       xsi:schemaLocation="http://www.springframework.org/schema/beans
+        http://www.springframework.org/schema/beans/spring-beans.xsd
+        http://www.springframework.org/schema/aop
+        http://www.springframework.org/schema/aop/spring-aop.xsd">
+
+    <!--配置service代理-->
+    <!--<bean id="proxyAccountService" factory-bean="beanFactory" factory-method="getAccountService"></bean>-->
+    <!--配置beanFactory-->
+    <bean id="beanFactory" class="com.dx.factory.BeanFactory">
+        <property name="accountService" ref="accountService"></property>
+        <property name="transactionManagerUtils" ref="manager"></property>
+    </bean>
+    <!--配置service层-->
+    <bean id="accountService" class="com.dx.service.impl.AccountServiceImpl">
+        <property name="accountDao" ref="accountDao"></property>
+    </bean>
+    <!--配置dao层-->
+    <bean id="accountDao" class="com.dx.dao.impl.AccountDaoImpl">
+        <property name="runner" ref="runner"></property>
+        <property name="connectionUtils" ref="connection"></property>
+    </bean>
+    <!--配置Connection-->
+    <bean id="connection" class="com.dx.utils.ConnectionUtils">
+        <property name="dataSource" ref="dataSource"></property>
+    </bean>
+
+    <!--配置连接对象-->
+    <bean id="runner" class="org.apache.commons.dbutils.QueryRunner">
+        <constructor-arg name="ds" ref="dataSource"></constructor-arg>
+    </bean>
+    <!--配置数据源-->
+    <bean id="dataSource" class="com.mchange.v2.c3p0.ComboPooledDataSource">
+        <property name="driverClass" value="com.mysql.jdbc.Driver"></property>
+        <property name="jdbcUrl" value="jdbc:mysql://localhost:3306/psc"></property>
+        <property name="user" value="root"></property>
+        <property name="password" value=""></property>
+    </bean>
+    <!--配置事务管理-->
+    <bean id="manager" class="com.dx.utils.TransactionManagerUtils">
+        <property name="connectionUtils" ref="connection"></property>
+    </bean>
+    <!--配置aop-->
+    <aop:config>
+        <aop:pointcut id="pt1" expression="execution(* com.dx.service.impl.*.*(..))"></aop:pointcut>
+        <aop:aspect id="txAdvice" ref="manager">
+            <aop:before method="begin" pointcut-ref="pt1"></aop:before>
+            <aop:after-returning method="commit" pointcut-ref="pt1"></aop:after-returning>
+            <aop:after-throwing method="rollback" pointcut-ref="pt1"></aop:after-throwing>
+            <aop:after method="release" pointcut-ref="pt1"></aop:after>
+        </aop:aspect>
+    </aop:config>
+</beans>
